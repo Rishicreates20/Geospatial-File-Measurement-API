@@ -1,13 +1,16 @@
 """FastAPI application factory. Run with: uvicorn app.main:app --reload"""
 
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse
 
 from app.api.files import router as files_router
 from app.config import Settings
 from app.database import make_session_factory
+
+UPLOAD_PAGE = Path(__file__).parent / "static" / "index.html"
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -24,9 +27,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(files_router)
 
     @app.get("/", include_in_schema=False)
-    def root() -> RedirectResponse:
-        # The API has no home page; send visitors to the interactive docs.
-        return RedirectResponse(url="/docs")
+    def upload_page() -> FileResponse:
+        # A single static page that calls the API from the browser; no build step.
+        return FileResponse(UPLOAD_PAGE)
 
     @app.get("/health", tags=["health"])
     def health() -> dict[str, str]:
