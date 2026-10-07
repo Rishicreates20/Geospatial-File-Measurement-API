@@ -1,5 +1,7 @@
 # Geospatial File Measurement API
 
+[![CI](https://github.com/Rishicreates20/Geospatial-File-Measurement-API/actions/workflows/ci.yml/badge.svg)](https://github.com/Rishicreates20/Geospatial-File-Measurement-API/actions/workflows/ci.yml)
+
 A FastAPI service that accepts a geospatial file (a zipped **Shapefile**, **KML** or **KMZ**), extracts every feature, and returns accurate measurements: **area** for polygons and **length** for lines, calculated in a metric projection chosen for each feature.
 
 ```
