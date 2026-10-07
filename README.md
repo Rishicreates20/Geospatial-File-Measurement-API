@@ -1,5 +1,7 @@
 # Geospatial File Measurement API
 
+[![CI](https://github.com/Rishicreates20/Geospatial-File-Measurement-API/actions/workflows/ci.yml/badge.svg)](https://github.com/Rishicreates20/Geospatial-File-Measurement-API/actions/workflows/ci.yml)
+
 A FastAPI service that accepts a geospatial file (a zipped **Shapefile**, **KML** or **KMZ**), extracts every feature, and returns accurate measurements: **area** for polygons and **length** for lines, calculated in a metric projection chosen for each feature.
 
 ```
@@ -13,7 +15,7 @@ GET  /api/files/{id}/features/      geometry, CRS and properties per feature
 
 ## Setup
 
-Requires Python 3.11+ (developed on 3.13). GDAL is **not** needed separately: it ships inside the `pyogrio` wheel.
+Requires Python 3.12+ (pyproj 3.8 needs it; developed on 3.13). GDAL is **not** needed separately: it ships inside the `pyogrio` wheel.
 
 ```bash
 git clone <your-repo-url> geo-measure-api
