@@ -82,6 +82,7 @@
   // The whole page is two API calls: POST the file, then GET its measurements.
   const $ = (id) => document.getElementById(id);
   const input = $("file"), drop = $("drop");
+  let latestUpload = 0;  // only the most recent upload may update the page
 
   input.addEventListener("change", () => input.files[0] && upload(input.files[0]));
   drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
@@ -93,6 +94,7 @@
   });
 
   async function upload(file) {
+    const uploadId = ++latestUpload;
     $("error").hidden = true;
     $("result").hidden = true;
     showStatus(`Uploading and measuring ${file.name}…`);
@@ -107,9 +109,11 @@
         throw new Error(body.error || body.detail || `Upload failed (HTTP ${response.status})`);
       }
       const measurements = await fetch(`/api/files/${body.id}/measurements/`).then((r) => r.json());
+      if (uploadId !== latestUpload) return;  // a newer file was dropped meanwhile
       render(body, measurements);
       showStatus(`Saved as file ${body.id}.`);
     } catch (err) {
+      if (uploadId !== latestUpload) return;
       showStatus("");
       $("error").textContent = err.message;
       $("error").hidden = false;
