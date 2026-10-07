@@ -28,7 +28,7 @@ pip install -r requirements-dev.txt
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/docs for interactive Swagger docs, where you can upload files from the browser (the root URL `/` redirects there). Every endpoint lives under `/api/files/`, so any other path returns FastAPI's `{"detail":"Not Found"}`.
+Open **http://127.0.0.1:8000/** for the upload page: choose or drag in a `.kml`, `.kmz` or `.zip` and it shows the summary and a table of every feature's area or length. Interactive Swagger docs for the API are at http://127.0.0.1:8000/docs. Every endpoint lives under `/api/files/`, so any other path returns FastAPI's `{"detail":"Not Found"}`.
 
 Run the tests:
 
@@ -203,6 +203,7 @@ app/
 ├── database.py          SQLAlchemy engine/session + get_db dependency
 ├── models.py            ORM: UploadedFile 1──* Feature (feature row also holds its measurement)
 ├── schemas.py           Pydantic response models (the API contract)
+├── static/index.html    Upload page served at /: plain HTML + JS calling the API
 ├── api/
 │   └── files.py         HTTP layer only: validation, status codes, response shaping
 └── services/
@@ -280,6 +281,7 @@ Going through WGS84 first also fixes files that are already "projected" in a CRS
 | **SQLite + SQLAlchemy** | Zero setup for a reviewer; switching to PostgreSQL is one environment variable. | PostGIS: would allow spatial queries, but is a heavy requirement for running an assignment locally. |
 | **Graceful partial failure** | File-level problems → `FAILED` with a clear message (422). Feature-level problems → a status per feature (`NOT_APPLICABLE` / `UNSUPPORTED` / `ERROR`); the rest of the file is still measured. | Rejecting the whole file when any feature is unsupported. |
 | **Repair invalid polygons** | Real-world data often has self-intersections; `make_valid` gives a meaningful area instead of ~0, and the `note` makes the repair visible. | Rejecting invalid polygons, or silently measuring them. |
+| **Upload page as one static HTML file** | Plain HTML + JavaScript served by FastAPI at `/`: no build step, no Node, no extra dependencies, and it only uses the public API, so it doubles as an example client. | A React/Vue frontend (more setup than the page is worth) or server-rendered Jinja templates. |
 | **Geometry stored as GeoJSON in the source CRS** | Users get back exactly what they uploaded; measurements are separate and reference the projection used. | Storing everything in EPSG:4326. |
 
 ---

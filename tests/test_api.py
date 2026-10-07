@@ -263,7 +263,10 @@ def test_list_and_delete(client):
     assert client.get(f"/api/files/{file_id}/").status_code == 404
 
 
-def test_root_redirects_to_docs(client):
-    response = client.get("/", follow_redirects=False)
-    assert response.status_code == 307
-    assert response.headers["location"] == "/docs"
+def test_root_serves_upload_page(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert 'type="file"' in response.text
+    assert "/api/files/" in response.text  # the page posts to the upload endpoint
+    assert client.get("/docs").status_code == 200

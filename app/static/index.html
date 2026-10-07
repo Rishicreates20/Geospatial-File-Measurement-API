@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Geospatial File Measurement</title>
+  <style>
+    :root {
+      --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6677;
+      --border: #d9dde5; --accent: #2563eb; --ok: #15803d; --warn: #b45309; --err: #b91c1c;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #12151b; --card: #1b2029; --text: #e6e9ef; --muted: #9aa3b2;
+        --border: #2d3442; --accent: #60a5fa; --ok: #4ade80; --warn: #fbbf24; --err: #f87171;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+    main { max-width: 1000px; margin: 0 auto; padding: 32px 16px 64px; }
+    h1 { font-size: 1.6rem; margin: 0 0 4px; }
+    .muted { color: var(--muted); }
+    a { color: var(--accent); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-top: 20px; }
+    #drop { display: block; border: 2px dashed var(--border); border-radius: 10px; padding: 36px 16px; text-align: center; cursor: pointer; }
+    #drop.over { border-color: var(--accent); }
+    #drop strong { color: var(--accent); }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+    .stat { border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .stat .value { font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .badge { font-size: 0.8rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+    .MEASURED { color: var(--ok); } .NOT_APPLICABLE { color: var(--muted); }
+    .UNSUPPORTED { color: var(--warn); } .ERROR, .FAILED { color: var(--err); }
+    .message { padding: 12px; border-radius: 8px; border: 1px solid currentColor; margin-top: 12px; }
+    .small { font-size: 0.85rem; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Geospatial File Measurement</h1>
+  <p class="muted">Upload a KML, KMZ or zipped Shapefile to get the area of every polygon and the length of every line.
+    API docs: <a href="/docs">/docs</a></p>
+
+  <section class="card">
+    <label id="drop" for="file">
+      <div><strong>Choose a file</strong> or drag it here</div>
+      <div class="muted small">.kml, .kmz or .zip (Shapefile)</div>
+    </label>
+    <input id="file" type="file" accept=".kml,.kmz,.zip" hidden>
+    <p id="status" class="muted small" hidden></p>
+    <div id="error" class="message ERROR" hidden></div>
+  </section>
+
+  <section id="result" class="card" hidden>
+    <h2 id="filename" style="margin-top:0"></h2>
+    <p id="fileinfo" class="muted small"></p>
+    <div id="warnings" class="message UNSUPPORTED small" hidden></div>
+    <div class="stats" style="margin-top:12px">
+      <div class="stat"><div class="muted small">Features</div><div class="value" id="s-features"></div></div>
+      <div class="stat"><div class="muted small">Measured</div><div class="value" id="s-measured"></div></div>
+      <div class="stat"><div class="muted small">Total area</div><div class="value" id="s-area"></div></div>
+      <div class="stat"><div class="muted small">Total length</div><div class="value" id="s-length"></div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Name / layer</th><th>Geometry</th><th>Status</th>
+            <th style="text-align:right">Area</th><th style="text-align:right">Length / perimeter</th><th>Notes</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+  // The whole page is two API calls: POST the file, then GET its measurements.
+  const $ = (id) => document.getElementById(id);
+  const input = $("file"), drop = $("drop");
+  let latestUpload = 0;  // only the most recent upload may update the page
+
+  input.addEventListener("change", () => input.files[0] && upload(input.files[0]));
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    drop.classList.remove("over");
+    if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]);
+  });
+
+  async function upload(file) {
+    const uploadId = ++latestUpload;
+    $("error").hidden = true;
+    $("result").hidden = true;
+    showStatus(`Uploading and measuring ${file.name}…`);
+
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const response = await fetch("/api/files/", { method: "POST", body: form });
+      const body = await response.json();
+      if (!response.ok) {
+        // 400/413 return {detail}, a 422 FAILED file returns the file info with an error.
+        throw new Error(body.error || body.detail || `Upload failed (HTTP ${response.status})`);
+      }
+      const measurements = await fetch(`/api/files/${body.id}/measurements/`).then((r) => r.json());
+      if (uploadId !== latestUpload) return;  // a newer file was dropped meanwhile
+      render(body, measurements);
+      showStatus(`Saved as file ${body.id}.`);
+    } catch (err) {
+      if (uploadId !== latestUpload) return;
+      showStatus("");
+      $("error").textContent = err.message;
+      $("error").hidden = false;
+    } finally {
+      input.value = "";  // allow re-uploading the same file
+    }
+  }
+
+  function render(info, data) {
+    $("filename").textContent = info.filename;
+    $("fileinfo").textContent = `${info.file_type} · CRS ${info.crs} · layers: ${info.layers.join(", ")}`;
+    $("warnings").hidden = info.warnings.length === 0;
+    $("warnings").textContent = info.warnings.join(" ");
+
+    const s = data.summary;
+    $("s-features").textContent = s.feature_count;
+    $("s-measured").textContent = s.measured_count;
+    $("s-area").textContent = formatArea(s.total_area_m2);
+    $("s-length").textContent = formatLength(s.total_length_m);
+
+    const rows = $("rows");
+    rows.replaceChildren();
+    for (const m of data.measurements) {
+      const tr = document.createElement("tr");
+      const isPolygon = m.area_m2 !== null;
+      addCell(tr, m.feature_id);
+      addCell(tr, m.name ? `${m.name}\n` : "", m.layer);
+      addCell(tr, m.geometry_type || "none");
+      const badge = document.createElement("span");
+      badge.className = `badge ${m.status}`;
+      badge.textContent = m.status.replace("_", " ");
+      addCell(tr, badge);
+      addCell(tr, isPolygon ? formatArea(m.area_m2) : "", null, "num");
+      addCell(tr, isPolygon ? formatLength(m.perimeter_m) : (m.length_m !== null ? formatLength(m.length_m) : ""), null, "num");
+      addCell(tr, m.note || "", m.projected_crs ? `Projection: ${m.projected_crs}` : null);
+      rows.append(tr);
+    }
+    $("result").hidden = false;
+  }
+
+  // Values come from the uploaded file, so they are set as text, never as HTML.
+  function addCell(tr, content, subtext, className) {
+    const td = document.createElement("td");
+    if (className) td.className = className;
+    if (content instanceof Node) td.append(content);
+    else td.append(String(content).trim());
+    if (subtext) {
+      const sub = document.createElement("div");
+      sub.className = "muted small";
+      sub.textContent = subtext;
+      td.append(sub);
+    }
+    tr.append(td);
+  }
+
+  function showStatus(text) {
+    $("status").textContent = text;
+    $("status").hidden = !text;
+  }
+
+  const number = (value, digits) => value.toLocaleString(undefined, { maximumFractionDigits: digits });
+
+  function formatArea(m2) {
+    if (!m2) return "0 m²";
+    if (m2 >= 1e6) return `${number(m2 / 1e6, 3)} km²`;
+    if (m2 >= 1e4) return `${number(m2 / 1e4, 2)} ha`;
+    return `${number(m2, 1)} m²`;
+  }
+
+  function formatLength(m) {
+    if (!m) return "0 m";
+    return m >= 1000 ? `${number(m / 1000, 3)} km` : `${number(m, 1)} m`;
+  }
+</script>
+</body>
+</html>
