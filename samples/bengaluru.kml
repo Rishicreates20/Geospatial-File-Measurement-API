@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Bengaluru sample</name>
+    <Folder>
+      <name>Parks</name>
+      <Placemark>
+        <name>Cubbon Park (approx.)</name>
+        <ExtendedData>
+          <Data name="category"><value>park</value></Data>
+        </ExtendedData>
+        <Polygon>
+          <outerBoundaryIs><LinearRing><coordinates>
+            77.5885,12.9810,0 77.5975,12.9810,0 77.6000,12.9740,0
+            77.5960,12.9705,0 77.5890,12.9725,0 77.5885,12.9810,0
+          </coordinates></LinearRing></outerBoundaryIs>
+        </Polygon>
+      </Placemark>
+      <Placemark>
+        <name>Lalbagh (approx., with a lake hole)</name>
+        <Polygon>
+          <outerBoundaryIs><LinearRing><coordinates>
+            77.5800,12.9530 77.5900,12.9530 77.5900,12.9440 77.5800,12.9440 77.5800,12.9530
+          </coordinates></LinearRing></outerBoundaryIs>
+          <innerBoundaryIs><LinearRing><coordinates>
+            77.5830,12.9500 77.5860,12.9500 77.5860,12.9470 77.5830,12.9470 77.5830,12.9500
+          </coordinates></LinearRing></innerBoundaryIs>
+        </Polygon>
+      </Placemark>
+    </Folder>
+    <Folder>
+      <name>Roads</name>
+      <Placemark>
+        <name>MG Road (approx.)</name>
+        <LineString><coordinates>
+          77.6000,12.9755 77.6060,12.9740 77.6120,12.9732 77.6190,12.9725
+        </coordinates></LineString>
+      </Placemark>
+      <Placemark>
+        <name>Mixed geometry</name>
+        <MultiGeometry>
+          <Point><coordinates>77.5946,12.9716</coordinates></Point>
+          <LineString><coordinates>77.5946,12.9716 77.6000,12.9755</coordinates></LineString>
+        </MultiGeometry>
+      </Placemark>
+    </Folder>
+    <Placemark>
+      <name>Vidhana Soudha</name>
+      <Point><coordinates>77.5907,12.9797,0</coordinates></Point>
+    </Placemark>
+  </Document>
+</kml>
