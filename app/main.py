@@ -3,6 +3,7 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 
 from app.api.files import router as files_router
 from app.config import Settings
@@ -21,6 +22,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.session_factory = make_session_factory(settings.database_url)
     app.include_router(files_router)
+
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        # The API has no home page; send visitors to the interactive docs.
+        return RedirectResponse(url="/docs")
 
     @app.get("/health", tags=["health"])
     def health() -> dict[str, str]:

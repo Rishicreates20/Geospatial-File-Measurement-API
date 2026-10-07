@@ -26,7 +26,7 @@ pip install -r requirements-dev.txt
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/docs for interactive Swagger docs, where you can upload files from the browser.
+Open http://127.0.0.1:8000/docs for interactive Swagger docs, where you can upload files from the browser (the root URL `/` redirects there). Every endpoint lives under `/api/files/`, so any other path returns FastAPI's `{"detail":"Not Found"}`.
 
 Run the tests:
 
@@ -288,7 +288,7 @@ Going through WGS84 first also fixes files that are already "projected" in a CRS
 pytest -v
 ```
 
-31 tests:
+32 tests:
 
 - **API (end to end)**: KML, KMZ and Shapefile uploads; file info; features and pagination; listing and deletion; unsupported geometries; self-intersecting polygons; Web Mercator and UTM inputs; missing `.prj` (assumed WGS84 vs. refused); zip without `.shp`; shapefile missing `.dbf`; corrupt KML; non-zip `.zip`; wrong extension (400); size limit (413); unknown id (404); measurements of a failed file (409).
 - **Measurement accuracy**: areas and lengths compared with `pyproj.Geod` at several latitudes (including the Arctic) and sizes, within 0.001%.

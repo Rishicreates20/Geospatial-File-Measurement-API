@@ -261,3 +261,9 @@ def test_list_and_delete(client):
 
     assert client.delete(f"/api/files/{file_id}/").status_code == 204
     assert client.get(f"/api/files/{file_id}/").status_code == 404
+
+
+def test_root_redirects_to_docs(client):
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"
